@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# A handy "YouTube-cover-image-downloader" script:
+# Downloads YouTube cover (thumbnail) images and converts them to JPEG. 
+#
+# Nota bene:    Downloads and converts images to the current working directory. 
+#               Downloading requires a working yt-dlp installation.
+#               Conversion requires a working ImageMagick installation for the "convert" command.
+#               Converted images are sequentially renamed "Thumb_xxx.jpg", so check their filenames accordingly.
+
+process_thumbnail() {
+    url="$1"
+    filename=$(basename "$url" | sed 's/\.[^.]*$//')
+    thumbnail_url=$(yt-dlp --list-thumbnail "$url" | grep -o 'https:\/\/[^"]*maxresdefault\.webp' | head -n 1)
+
+    if [ -n "$thumbnail_url" ]; then
+        echo "Downloading YouTube cover image …"
+        wget -q "$thumbnail_url" -O "$filename.webp"
+        if [ -e "$filename.webp" ]; then
+            echo "Converting to JPEG …"
+            convert "$filename.webp" "Thumb_$((++counter)).jpg"
+            rm "$filename.webp"
+            if [ -e "Thumb_$counter.jpg" ]; then
+                echo "Converted thumbnail saved as Thumb_$counter.jpg"
+            else
+                echo "Conversion to JPEG failed."
+            fi
+        else
+            echo "Download failed."
+        fi
+    else
+        echo "No »maxresdefault« cover image found."
+    fi
+}
+
+# Main loop
+counter=0
+while true; do
+    echo -e "\n"
+    read -p "Enter YouTube URL (or 'q' to exit): " url
+
+    if [ "$url" == "q" ]; then
+        echo "Exiting..."
+        exit 0
+    fi
+
+    process_thumbnail "$url"
+done
